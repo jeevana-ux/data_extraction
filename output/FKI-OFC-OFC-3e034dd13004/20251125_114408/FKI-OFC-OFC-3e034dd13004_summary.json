@@ -1,0 +1,18 @@
+{
+  "pdf_path": "input\\FKI-OFC-OFC-3e034dd13004.pdf",
+  "output_root": "C:\\Users\\Admin\\.gemini\\antigravity\\scratch\\pdf_extractor\\output",
+  "input_basename": "FKI-OFC-OFC-3e034dd13004",
+  "run_timestamp": "20251125_114408",
+  "run_folder": "output\\FKI-OFC-OFC-3e034dd13004\\20251125_114408",
+  "text_file": "output\\FKI-OFC-OFC-3e034dd13004\\20251125_114408\\FKI-OFC-OFC-3e034dd13004_full_text.txt",
+  "num_tables": 7,
+  "table_files": [
+    "output\\FKI-OFC-OFC-3e034dd13004\\20251125_114408\\FKI-OFC-OFC-3e034dd13004_page1_table_1.csv",
+    "output\\FKI-OFC-OFC-3e034dd13004\\20251125_114408\\FKI-OFC-OFC-3e034dd13004_page2_table_2.csv",
+    "output\\FKI-OFC-OFC-3e034dd13004\\20251125_114408\\FKI-OFC-OFC-3e034dd13004_table_3.csv",
+    "output\\FKI-OFC-OFC-3e034dd13004\\20251125_114408\\FKI-OFC-OFC-3e034dd13004_table_4.csv",
+    "output\\FKI-OFC-OFC-3e034dd13004\\20251125_114408\\FKI-OFC-OFC-3e034dd13004_table_5.csv",
+    "output\\FKI-OFC-OFC-3e034dd13004\\20251125_114408\\FKI-OFC-OFC-3e034dd13004_table_6.csv",
+    "output\\FKI-OFC-OFC-3e034dd13004\\20251125_114408\\FKI-OFC-OFC-3e034dd13004_table_7.csv"
+  ]
+}
