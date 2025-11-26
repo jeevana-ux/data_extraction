@@ -31,6 +31,13 @@ import pypdfium2 as pdfium
 from PIL import Image
 import pytesseract
 import pandas as pd
+import logging
+try:
+    from src.logger import setup_logging
+except ImportError:
+    from logger import setup_logging
+
+logger = logging.getLogger(__name__)
 
 # try to import camelot (optional)
 try:
@@ -271,8 +278,9 @@ def extract_text_with_pdfplumber(pdf_path: str) -> str:
                 page_header = f"\n\n--- PAGE {i} ---\n\n"
                 full_text.append(page_header + txt)
         return "\n".join(full_text).strip()
+        return "\n".join(full_text).strip()
     except Exception as e:
-        print(f"[pdfplumber] failed for {pdf_path}: {e}")
+        logger.error(f"[pdfplumber] failed for {pdf_path}: {e}")
         return ""
 
 
@@ -281,7 +289,7 @@ def ocr_pdf_pages_with_pypdfium2(pdf_path: str, dpi: int = 200, lang: str = "eng
     try:
         pdf = pdfium.PdfDocument(pdf_path)
     except Exception as e:
-        print(f"[pypdfium2] failed to open PDF for OCR: {pdf_path}: {e}")
+        logger.error(f"[pypdfium2] failed to open PDF for OCR: {pdf_path}: {e}")
         return ""
 
     for i, page in enumerate(pdf, start=1):
@@ -295,7 +303,7 @@ def ocr_pdf_pages_with_pypdfium2(pdf_path: str, dpi: int = 200, lang: str = "eng
             header = f"\n\n--- OCR PAGE {i} ---\n\n"
             texts.append(header + txt)
         except Exception as e:
-            print(f"[OCR] page {i} failed for {pdf_path}: {e}")
+            logger.error(f"[OCR] page {i} failed for {pdf_path}: {e}")
             texts.append(f"\n\n--- OCR PAGE {i} ERROR ---\n\n")
     return "\n".join(texts).strip()
 
@@ -319,7 +327,7 @@ def extract_tables_with_pdfplumber(pdf_path: str) -> list[pd.DataFrame]:
                     df.attrs["page"] = i
                     tables.append(df)
     except Exception as e:
-        print(f"[pdfplumber tables] failed for {pdf_path}: {e}")
+        logger.error(f"[pdfplumber tables] failed for {pdf_path}: {e}")
     return tables
 
 
@@ -339,7 +347,7 @@ def extract_tables_with_camelot(pdf_path: str) -> list[pd.DataFrame]:
             except Exception:
                 pass
     except Exception as e:
-        print(f"[camelot] failed for {pdf_path}: {e}")
+        logger.error(f"[camelot] failed for {pdf_path}: {e}")
     return dfs
 
 
@@ -401,36 +409,36 @@ def save_outputs(pdf_path: str, text: str, tables: list[pd.DataFrame],
 # ==============================
 
 def run_for_pdf(pdf_path: str, ocr_if_empty: bool = True, try_camelot: bool = True):
-    print(f"\n[run] extracting from: {pdf_path}")
+    logger.info(f"Extracting from: {pdf_path}")
 
     run_dir, safe_base, timestamp = prepare_run_output_dir(pdf_path)
-    print(f"[run] output directory: {run_dir}")
+    logger.info(f"Output directory: {run_dir}")
 
     # --- TEXT ---
     text = extract_text_with_pdfplumber(pdf_path)
-    print(f"[run] pdfplumber extracted {len(text)} chars")
+    logger.info(f"pdfplumber extracted {len(text)} chars")
 
     # --- TABLES ---
     tables = extract_tables_with_pdfplumber(pdf_path)
-    print(f"[run] pdfplumber found {len(tables)} tables")
+    logger.info(f"pdfplumber found {len(tables)} tables")
 
     if try_camelot and HAS_CAMELOT:
         camelot_tables = extract_tables_with_camelot(pdf_path)
-        print(f"[run] camelot found {len(camelot_tables)} tables")
+        logger.info(f"camelot found {len(camelot_tables)} tables")
         tables.extend(camelot_tables)
 
     # OCR fallback for text
     if ocr_if_empty and (not text or len(text.strip()) < 50):
-        print("[run] text is short/empty, running OCR fallback...")
+        logger.warning("Text is short/empty, running OCR fallback...")
         ocr_text = ocr_pdf_pages_with_pypdfium2(pdf_path)
         if ocr_text and (not text or len(text.strip()) < 50):
             text = ocr_text
-            print(f"[run] OCR extracted {len(text)} chars")
+            logger.info(f"OCR extracted {len(text)} chars")
 
     # --- CLEANING PHASE ---
     # 1) clean text (remove disclaimers, keep Subject)
     text = clean_email_text(text)
-    print(f"[run] cleaned text length: {len(text)} chars")
+    logger.info(f"Cleaned text length: {len(text)} chars")
 
     # 2) clean tables (remove disclaimer rows/cells)
     cleaned_tables: list[pd.DataFrame] = []
@@ -438,13 +446,13 @@ def run_for_pdf(pdf_path: str, ocr_if_empty: bool = True, try_camelot: bool = Tr
         cleaned_df = clean_email_table(df)
         if cleaned_df is not None and not cleaned_df.empty:
             cleaned_tables.append(cleaned_df)
-    print(f"[run] tables after disclaimer cleaning: {len(cleaned_tables)}")
+    logger.info(f"Tables after disclaimer cleaning: {len(cleaned_tables)}")
 
     # --- SAVE ---
     summary_file, text_file, table_files = save_outputs(
         pdf_path, text, cleaned_tables, run_dir, safe_base, timestamp
     )
-    print(f"[run] saved outputs. summary: {summary_file}")
+    logger.info(f"Saved outputs. summary: {summary_file}")
 
     return {
         "run_folder": str(run_dir),
@@ -475,13 +483,15 @@ if __name__ == "__main__":
     parser.add_argument("--no-camelot", action="store_true", help="Disable camelot attempts")
     args = parser.parse_args()
 
+    setup_logging()
+
     if args.pdf:
         pdf_paths = [Path(args.pdf)]
     else:
         input_dir = Path(args.input_dir)
         pdf_paths = sorted(input_dir.glob("*.pdf"))
         if not pdf_paths:
-            print(f"No PDFs found in {input_dir.resolve()}")
+            logger.error(f"No PDFs found in {input_dir.resolve()}")
             raise SystemExit(1)
 
     all_results = {}
@@ -491,5 +501,5 @@ if __name__ == "__main__":
                           try_camelot=(not args.no_camelot))
         all_results[str(pdf_path)] = res
 
-    print("\n[all runs completed]")
-    print(json.dumps(all_results, indent=2))
+    logger.info("All runs completed")
+    logger.info(json.dumps(all_results, indent=2))
