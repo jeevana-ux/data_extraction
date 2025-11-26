@@ -7,3 +7,5 @@ Pillow
 camelot-py
 opencv-python-headless
 img2table
+openapi
+dotenv
