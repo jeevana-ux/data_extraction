@@ -7,5 +7,11 @@ Pillow
 camelot-py
 opencv-python-headless
 img2table
-openapi
-dotenv
+python-dotenv
+requests
+
+# DSPy Framework and OOP Infrastructure
+dspy-ai
+pydantic
+pydantic-settings
+click
