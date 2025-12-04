@@ -11,7 +11,7 @@ from src.config import ExtractionConfig, get_config
 from src.models import ExtractionResult, SchemeHeader, ProcessingMetadata
 from src.extractors.pdf_processor import PDFProcessor
 from src.llm.llm_client import OpenRouterLLM
-from src.llm.dspy_modules import SchemeExtractor
+from src.llm.dspy_pipeline import DSPySchemeExtractor
 from src.pipeline.output_manager import OutputManager
 
 logger = logging.getLogger(__name__)
@@ -50,8 +50,16 @@ class ExtractionPipeline:
             timeout=self.config.llm_timeout
         )
         
-        # Initialize scheme extractor
-        self.scheme_extractor = SchemeExtractor(self.llm, self.config)
+        # Initialize scheme extractor (DSPy with CoT or legacy)
+        if self.config.enable_chain_of_thought:
+            logger.info("Using DSPy Chain-of-Thought extractor")
+            self.scheme_extractor = DSPySchemeExtractor(self.llm,  self.config)
+            # Create CoT log directory if saving is enabled
+            if self.config.save_cot_reasoning:
+                self.config.cot_log_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            logger.info("Using legacy scheme extractor")
+            self.scheme_extractor = SchemeExtractor(self.llm, self.config)
         
         logger.info("Extraction pipeline initialized")
     

@@ -1,0 +1,59 @@
+[
+    {
+        "mail_subject": "Q4 FY24 JBP Support - Electronics Category",
+        "mail_body": "Dear Team,\n\nThis is to inform you about our Q4 FY24 Joint Business Plan support for Electronics category.\n\nScheme Details:\n- Period: January 1, 2024 to March 31, 2024\n- Support: 5% of NLC\n- Applicable on: All sellout during the period\n- Brand: Samsung, LG, Sony\n\nPlease ensure timely claim submission.\n\nRegards,\nVendor Team",
+        "expected_schemes": [
+            {
+                "scheme_type": "BUY_SIDE",
+                "scheme_sub_type": "PERIODIC_CLAIM",
+                "scheme_name": "Q4 FY24 JBP Support",
+                "duration_start_date": "2024-01-01",
+                "duration_end_date": "2024-03-31",
+                "starting_at": "2024-01-01",
+                "ending_at": "2024-03-31",
+                "discount_type": "PERCENTAGE",
+                "discount_value": 5.0,
+                "confidence": 0.95,
+                "needs_escalation": false
+            }
+        ]
+    },
+    {
+        "mail_subject": "Price Drop Claim - Product XYZ",
+        "mail_body": "Dear Sir/Madam,\n\nWe are reducing the NLC for Product XYZ effective January 15, 2024.\n\nOld NLC: Rs. 10,000\nNew NLC: Rs. 9,500\nPrice Drop: Rs. 500\n\nClaim eligibility: Stock as on January 14, 2024\n\nPrice drop date: January 15, 2024\n\nPlease raise PDC claims accordingly.\n\nThanks,\nBrand Team",
+        "expected_schemes": [
+            {
+                "scheme_type": "BUY_SIDE",
+                "scheme_sub_type": "PDC",
+                "scheme_name": "Product XYZ Price Drop",
+                "price_drop_date": "2024-01-15",
+                "discount_type": "FLAT",
+                "discount_value": 500.0,
+                "confidence": 0.9,
+                "needs_escalation": false
+            }
+        ]
+    },
+    {
+        "mail_subject": "Festive Season Sellout Support",
+        "mail_body": "Hi Team,\n\nFor the upcoming festive season, we are offering sellout support.\n\nScheme: Diwali Sellout Campaign\nPeriod: October 1 to October 31, 2024\nSupport: 3% on sellout value\nMin Order: Rs. 50,000\nMax Cap: Rs. 25,000 per invoice\n\nCategory: Home Appliances\n\nKindly participate actively.\n\nRegards",
+        "expected_schemes": [
+            {
+                "scheme_type": "SELL_SIDE",
+                "scheme_sub_type": "PUC_FDC",
+                "scheme_name": "Diwali Sellout Campaign",
+                "duration_start_date": "2024-10-01",
+                "duration_end_date": "2024-10-31",
+                "starting_at": "2024-10-01",
+                "ending_at": "2024-10-31",
+                "discount_type": "PERCENTAGE",
+                "discount_value": 3.0,
+                "min_order_value": 50000.0,
+                "max_discount_cap": 25000.0,
+                "category": "Home Appliances",
+                "confidence": 0.92,
+                "needs_escalation": false
+            }
+        ]
+    }
+]

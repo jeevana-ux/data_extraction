@@ -47,91 +47,45 @@ class DiscountType(str, Enum):
 
 class SchemeHeader(BaseModel):
     """
-    Represents a single Retailer Hub scheme header.
+    Comprehensive scheme header model with 21 fields for vendor-Flipkart schemes.
+    Based on expert-engineered extraction prompt.
     
-    This is the primary output model for LLM extraction.
+    Date Format: DD/MM/YYYY
+    All fields mandatory - use null/None if information not available.
     """
-    
     model_config = ConfigDict(use_enum_values=True)
     
-    # Classification
-    scheme_type: SchemeType = Field(
-        description="Primary scheme classification"
-    )
-    scheme_sub_type: SchemeSubType = Field(
-        description="Detailed scheme sub-classification"
-    )
-    scheme_name: str = Field(
-        description="Human-readable scheme name"
-    )
+    # Core Identification
+    scheme_name: Optional[str] = Field(None, description="Scheme name/title (3-10 words)")
+    scheme_description: Optional[str] = Field(None, description="1-2 sentence summary of scheme purpose")
+    vendor_name: Optional[str] = Field(None, description="Official company/seller name")
     
-    # Dates
-    duration_start_date: Optional[date] = Field(
-        default=None,
-        description="Scheme duration start date"
-    )
-    duration_end_date: Optional[date] = Field(
-        default=None,
-        description="Scheme duration end date"
-    )
-    starting_at: Optional[date] = Field(
-        default=None,
-        description="Scheme effective start date"
-    )
-    ending_at: Optional[date] = Field(
-        default=None,
-        description="Scheme effective end date"
-    )
-    price_drop_date: Optional[date] = Field(
-        default=None,
-        description="Price drop date (PDC only)"
-    )
+    # Scheme Classification
+    scheme_type: str = Field("OTHER", description="BUY_SIDE | SELL_SIDE | ONE_OFF")
+    scheme_subtype: str = Field("OTHER", description="PERIODIC_CLAIM | PDC | PUC/FDC | COUPON | SUPER COIN | PREXO | BANK OFFER | ONE_OFF")
     
-    # Financial
-    discount_type: Optional[DiscountType] = Field(
-        default=None,
-        description="Type of discount offered"
-    )
-    discount_value: Optional[float] = Field(
-        default=None,
-        ge=0,
-        description="Discount value (percentage or flat amount)"
-    )
-    min_order_value: Optional[float] = Field(
-        default=None,
-        ge=0,
-        description="Minimum order value for scheme eligibility"
-    )
-    max_discount_cap: Optional[float] = Field(
-        default=None,
-        ge=0,
-        description="Maximum discount cap"
-    )
+    # Temporal Information (DD/MM/YYYY format)
+    scheme_period: str = Field("Duration", description="Duration | Event")
+    duration: Optional[str] = Field(None, description="DD/MM/YYYY to DD/MM/YYYY")
+    start_date: Optional[str] = Field(None, description="Scheme start date (DD/MM/YYYY)")
+    end_date: Optional[str] = Field(None, description="Scheme end date (DD/MM/YYYY)")
+    price_drop_date: Optional[str] = Field(None, description="PDC effective date (DD/MM/YYYY) or Not Applicable")
     
-    # Metadata
-    vendor_name: Optional[str] = Field(
-        default=None,
-        description="Vendor/brand name"
-    )
-    category: Optional[str] = Field(
-        default=None,
-        description="Product category"
-    )
-    remarks: Optional[str] = Field(
-        default=None,
-        description="Additional notes or remarks"
-    )
+    # Financial Terms
+    discount_type: Optional[str] = Field(None, description="Percentage of NLC | Percentage of MRP | Absolute")
+    max_cap: Optional[str] = Field(None, description="Maximum cap amount or Not Specified")
+    discount_slab_type: Optional[str] = Field(None, description="Slab structure for PERIODIC_CLAIM or Not Applicable")
+    brand_support_absolute: Optional[str] = Field(None, description="Support amount for ONE_OFF or Not Applicable")
+    gst_rate: Optional[str] = Field(None, description="GST percentage for ONE_OFF (e.g., 18%) or Not Applicable")
     
-    # Quality metrics
-    confidence: float = Field(
-        ge=0.0,
-        le=1.0,
-        description="Extraction confidence score (0-1)"
-    )
-    needs_escalation: bool = Field(
-        default=False,
-        description="Whether this extraction needs manual review"
-    )
+    # Conditions and Metadata
+    additional_conditions: Optional[str] = Field(None, description="Caps, exclusions, special terms")
+    fsn_file_config_file: str = Field("No", description="Yes if FSN/config files present, else No")
+    minimum_of_actual_discount_or_agreed_claim: str = Field("No", description="Yes if lesser of actual/agreed applies")
+    remove_gst_from_final_claim: Optional[str] = Field(None, description="Yes | No | Not Specified")
+    over_and_above: str = Field("No", description="Yes if explicitly mentioned as additional support")
+    scheme_document: str = Field("No", description="Yes if formal approval document present")
+    best_bet: Optional[str] = Field(None, description="Performance-based incentive for PERIODIC_CLAIM or No")
     
     # Source tracking
     source_file: Optional[str] = Field(
@@ -142,6 +96,10 @@ class SchemeHeader(BaseModel):
         default_factory=datetime.now,
         description="Timestamp of extraction"
     )
+    
+    # Legacy fields for backward compatibility (deprecated but kept for now)
+    confidence: Optional[float] = Field(0.7, description="Extraction confidence score (0.0-1.0)")
+    needs_escalation: Optional[bool] = Field(False, description="Whether scheme needs human review")
 
 
 class ExtractionResult(BaseModel):

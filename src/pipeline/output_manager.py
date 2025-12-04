@@ -113,22 +113,44 @@ class OutputManager:
         # Convert schemes to list of dictionaries
         scheme_data = []
         for scheme in schemes:
+            # Helper to safely format dates
+            def fmt_date(d):
+                return d if d else None
+
             scheme_dict = {
-                "scheme_type": scheme.scheme_type,
-                "scheme_sub_type": scheme.scheme_sub_type,
+                # Core Identification
                 "scheme_name": scheme.scheme_name,
-                "duration_start_date": scheme.duration_start_date.isoformat() if scheme.duration_start_date else None,
-                "duration_end_date": scheme.duration_end_date.isoformat() if scheme.duration_end_date else None,
-                "starting_at": scheme.starting_at.isoformat() if scheme.starting_at else None,
-                "ending_at": scheme.ending_at.isoformat() if scheme.ending_at else None,
-                "price_drop_date": scheme.price_drop_date.isoformat() if scheme.price_drop_date else None,
-                "discount_type": scheme.discount_type,
-                "discount_value": scheme.discount_value,
-                "min_order_value": scheme.min_order_value,
-                "max_discount_cap": scheme.max_discount_cap,
+                "scheme_description": scheme.scheme_description,
                 "vendor_name": scheme.vendor_name,
-                "category": scheme.category,
-                "remarks": scheme.remarks,
+                
+                # Classification
+                "scheme_type": scheme.scheme_type,
+                "scheme_subtype": scheme.scheme_subtype,
+                
+                # Temporal
+                "scheme_period": scheme.scheme_period,
+                "duration": scheme.duration,
+                "start_date": scheme.start_date,
+                "end_date": scheme.end_date,
+                "price_drop_date": scheme.price_drop_date,
+                
+                # Financial
+                "discount_type": scheme.discount_type,
+                "max_cap": scheme.max_cap,
+                "discount_slab_type": scheme.discount_slab_type,
+                "brand_support_absolute": scheme.brand_support_absolute,
+                "gst_rate": scheme.gst_rate,
+                
+                # Conditions/Metadata
+                "additional_conditions": scheme.additional_conditions,
+                "fsn_file_config_file": scheme.fsn_file_config_file,
+                "minimum_of_actual_discount_or_agreed_claim": scheme.minimum_of_actual_discount_or_agreed_claim,
+                "remove_gst_from_final_claim": scheme.remove_gst_from_final_claim,
+                "over_and_above": scheme.over_and_above,
+                "scheme_document": scheme.scheme_document,
+                "best_bet": scheme.best_bet,
+                
+                # Legacy/System
                 "confidence": scheme.confidence,
                 "needs_escalation": scheme.needs_escalation,
                 "source_file": scheme.source_file,
@@ -147,32 +169,7 @@ class OutputManager:
         logger.info(f"Schemes saved to: {output_file}")
         
         # Also return DataFrame for compatibility
-        rows = []
-        for scheme in schemes:
-            row = {
-                "scheme_type": scheme.scheme_type,
-                "scheme_sub_type": scheme.scheme_sub_type,
-                "scheme_name": scheme.scheme_name,
-                "duration_start_date": scheme.duration_start_date,
-                "duration_end_date": scheme.duration_end_date,
-                "starting_at": scheme.starting_at,
-                "ending_at": scheme.ending_at,
-                "price_drop_date": scheme.price_drop_date,
-                "discount_type": scheme.discount_type,
-                "discount_value": scheme.discount_value,
-                "min_order_value": scheme.min_order_value,
-                "max_discount_cap": scheme.max_discount_cap,
-                "vendor_name": scheme.vendor_name,
-                "category": scheme.category,
-                "remarks": scheme.remarks,
-                "confidence": scheme.confidence,
-                "needs_escalation": scheme.needs_escalation,
-                "source_file": scheme.source_file,
-                "extracted_at": scheme.extracted_at,
-            }
-            rows.append(row)
-        
-        return pd.DataFrame(rows)
+        return pd.DataFrame(scheme_data)
     
     def load_extracted_emails(self) -> pd.DataFrame:
         """
