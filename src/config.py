@@ -132,6 +132,58 @@ class ExtractionConfig(BaseSettings):
         description="Directory for CoT reasoning logs"
     )
     
+    # ===== LLM Logging Configuration =====
+    llm_log_dir: Path = Field(
+        default=Path("logs/llm_calls"),
+        description="Directory for detailed LLM call logs"
+    )
+    
+    enable_detailed_llm_logging: bool = Field(
+        default=True,
+        description="Enable detailed JSON logging for all LLM calls"
+    )
+    
+    log_llm_to_separate_file: bool = Field(
+        default=True,
+        description="Save LLM call logs to separate JSON files"
+    )
+    
+    # ===== Additional LLM Parameters =====
+    llm_top_p: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Nucleus sampling parameter (top-p)"
+    )
+    
+    llm_frequency_penalty: Optional[float] = Field(
+        default=None,
+        ge=-2.0,
+        le=2.0,
+        description="Frequency penalty for token repetition"
+    )
+    
+    llm_presence_penalty: Optional[float] = Field(
+        default=None,
+        ge=-2.0,
+        le=2.0,
+        description="Presence penalty for topic repetition"
+    )
+    
+    # ===== Cost Tracking =====
+    model_input_cost_per_1m_tokens: float = Field(
+        default=0.50,
+        ge=0.0,
+        description="Cost per 1 million input tokens in USD"
+    )
+    
+    model_output_cost_per_1m_tokens: float = Field(
+        default=1.50,
+        ge=0.0,
+        description="Cost per 1 million output tokens in USD"
+    )
+
+    
     # ===== Retry Configuration =====
     max_retries: int = Field(
         default=3,
@@ -151,7 +203,7 @@ class ExtractionConfig(BaseSettings):
         description="Output filename for scheme headers"
     )
     
-    @field_validator('input_dir', 'output_dir', 'final_output_dir', 'logs_dir')
+    @field_validator('input_dir', 'output_dir', 'final_output_dir', 'logs_dir', 'cot_log_dir', 'llm_log_dir')
     @classmethod
     def ensure_directory_exists(cls, v: Path) -> Path:
         """Ensure directory exists, create if not."""

@@ -2,10 +2,13 @@
 
 import json
 import logging
+import time
 from typing import Optional, List, Dict, Any
 import requests
 
 import dspy
+
+from src.llm.llm_logger import LLMLogger
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +27,14 @@ class OpenRouterLLM(dspy.LM):
         base_url: str = "https://openrouter.ai/api/v1",
         temperature: float = 0.0,
         max_tokens: int = 4000,
-        timeout: int = 120
+        timeout: int = 120,
+        top_p: Optional[float] = None,
+        frequency_penalty: Optional[float] = None,
+        presence_penalty: Optional[float] = None,
+        enable_logging: bool = True,
+        llm_logger: Optional[LLMLogger] = None,
+        input_cost_per_1m: float = 0.50,
+        output_cost_per_1m: float = 1.50
     ):
         """
         Initialize OpenRouter LLM client.
@@ -36,6 +46,13 @@ class OpenRouterLLM(dspy.LM):
             temperature: Sampling temperature
             max_tokens: Maximum response tokens
             timeout: Request timeout in seconds
+            top_p: Nucleus sampling parameter
+            frequency_penalty: Frequency penalty for repetition
+            presence_penalty: Presence penalty for topic repetition
+            enable_logging: Enable detailed LLM logging
+            llm_logger: Optional LLMLogger instance (creates new if None)
+            input_cost_per_1m: Cost per 1M input tokens
+            output_cost_per_1m: Cost per 1M output tokens
         """
         super().__init__(model=model)
         
@@ -45,6 +62,19 @@ class OpenRouterLLM(dspy.LM):
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.timeout = timeout
+        self.top_p = top_p
+        self.frequency_penalty = frequency_penalty
+        self.presence_penalty = presence_penalty
+        
+        # Initialize LLM logger
+        self.enable_logging = enable_logging
+        if enable_logging:
+            self.llm_logger = llm_logger or LLMLogger(
+                input_cost_per_1m_tokens=input_cost_per_1m,
+                output_cost_per_1m_tokens=output_cost_per_1m
+            )
+        else:
+            self.llm_logger = None
         
         self.history: List[Dict[str, Any]] = []
     
@@ -71,6 +101,26 @@ class OpenRouterLLM(dspy.LM):
                 raise ValueError("Either prompt or messages must be provided")
             messages = [{"role": "user", "content": prompt}]
         
+        # Get parameters (allow kwargs to override)
+        temperature = kwargs.get("temperature", self.temperature)
+        max_tokens = kwargs.get("max_tokens", self.max_tokens)
+        top_p = kwargs.get("top_p", self.top_p)
+        frequency_penalty = kwargs.get("frequency_penalty", self.frequency_penalty)
+        presence_penalty = kwargs.get("presence_penalty", self.presence_penalty)
+        
+        # Log request if enabled
+        call_id = None
+        if self.enable_logging and self.llm_logger:
+            call_id = self.llm_logger.log_request(
+                model_name=self.model_name,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+                frequency_penalty=frequency_penalty,
+                presence_penalty=presence_penalty
+            )
+        
         # Prepare request
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -80,9 +130,20 @@ class OpenRouterLLM(dspy.LM):
         payload = {
             "model": self.model_name,
             "messages": messages,
-            "temperature": kwargs.get("temperature", self.temperature),
-            "max_tokens": kwargs.get("max_tokens", self.max_tokens),
+            "temperature": temperature,
+            "max_tokens": max_tokens,
         }
+        
+        # Add optional parameters if provided
+        if top_p is not None:
+            payload["top_p"] = top_p
+        if frequency_penalty is not None:
+            payload["frequency_penalty"] = frequency_penalty
+        if presence_penalty is not None:
+            payload["presence_penalty"] = presence_penalty
+        
+        # Start timing
+        start_time = time.time()
         
         try:
             logger.debug(f"Calling OpenRouter API with model: {self.model_name}")
@@ -94,24 +155,52 @@ class OpenRouterLLM(dspy.LM):
                 timeout=self.timeout
             )
             
+            # Calculate latency
+            latency = time.time() - start_time
+            
             response.raise_for_status()
             result = response.json()
             
             # Extract response text
             if "choices" in result and len(result["choices"]) > 0:
                 response_text = result["choices"][0]["message"]["content"]
+                usage = result.get("usage", {})
                 
-                # Store in history
-                self.history.append({
+                # Store in history with complete metadata
+                history_entry = {
                     "prompt": messages,
                     "response": response_text,
                     "model": self.model_name,
-                    "usage": result.get("usage", {})
-                })
+                    "usage": usage,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "top_p": top_p,
+                    "frequency_penalty": frequency_penalty,
+                    "presence_penalty": presence_penalty,
+                    "latency_seconds": latency,
+                    "call_id": call_id
+                }
+                self.history.append(history_entry)
+                
+                # Log response if enabled
+                if self.enable_logging and self.llm_logger and call_id:
+                    self.llm_logger.log_response(
+                        call_id=call_id,
+                        model_name=self.model_name,
+                        response_text=response_text,
+                        usage=usage,
+                        latency_seconds=latency,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        input_messages=messages,
+                        top_p=top_p,
+                        frequency_penalty=frequency_penalty,
+                        presence_penalty=presence_penalty
+                    )
                 
                 logger.info(
                     f"LLM response received: {len(response_text)} chars, "
-                    f"tokens: {result.get('usage', {}).get('total_tokens', 'unknown')}"
+                    f"tokens: {usage.get('total_tokens', 'unknown')}"
                 )
                 
                 return [response_text]
@@ -120,13 +209,70 @@ class OpenRouterLLM(dspy.LM):
                 return [""]
         
         except requests.exceptions.Timeout:
-            logger.error(f"OpenRouter API timeout after {self.timeout}s")
+            latency = time.time() - start_time
+            error_msg = f"OpenRouter API timeout after {self.timeout}s"
+            logger.error(error_msg)
+            
+            # Log error if enabled
+            if self.enable_logging and self.llm_logger and call_id:
+                self.llm_logger.log_response(
+                    call_id=call_id,
+                    model_name=self.model_name,
+                    response_text="",
+                    usage={},
+                    latency_seconds=latency,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    input_messages=messages,
+                    error=error_msg,
+                    top_p=top_p,
+                    frequency_penalty=frequency_penalty,
+                    presence_penalty=presence_penalty
+                )
             raise
         except requests.exceptions.RequestException as e:
-            logger.error(f"OpenRouter API request failed: {e}")
+            latency = time.time() - start_time
+            error_msg = f"OpenRouter API request failed: {e}"
+            logger.error(error_msg)
+            
+            # Log error if enabled
+            if self.enable_logging and self.llm_logger and call_id:
+                self.llm_logger.log_response(
+                    call_id=call_id,
+                    model_name=self.model_name,
+                    response_text="",
+                    usage={},
+                    latency_seconds=latency,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    input_messages=messages,
+                    error=error_msg,
+                    top_p=top_p,
+                    frequency_penalty=frequency_penalty,
+                    presence_penalty=presence_penalty
+                )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error calling OpenRouter: {e}")
+            latency = time.time() - start_time
+            error_msg = f"Unexpected error calling OpenRouter: {e}"
+            logger.error(error_msg)
+            
+            # Log error if enabled
+            if self.enable_logging and self.llm_logger and call_id:
+                self.llm_logger.log_response(
+                    call_id=call_id,
+                    model_name=self.model_name,
+                    response_text="",
+                    usage={},
+                    latency_seconds=latency,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    input_messages=messages,
+                    error=error_msg,
+                    top_p=top_p,
+                    frequency_penalty=frequency_penalty,
+                    presence_penalty=presence_penalty
+                )
             raise
     
     def get_usage_stats(self) -> Dict[str, int]:

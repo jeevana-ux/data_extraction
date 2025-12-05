@@ -319,10 +319,37 @@ class DSPySchemeExtractor:
         filename = f"{safe_subject}_{timestamp}_cot.json"
         filepath = self.config.cot_log_dir / filename
         
+        # Get last LLM call metadata from history
+        llm_metadata = {}
+        if hasattr(self.llm, 'history') and len(self.llm.history) > 0:
+            last_call = self.llm.history[-1]
+            llm_metadata = {
+                "model": last_call.get("model"),
+                "temperature": last_call.get("temperature"),
+                "max_tokens": last_call.get("max_tokens"),
+                "top_p": last_call.get("top_p"),
+                "frequency_penalty": last_call.get("frequency_penalty"),
+                "presence_penalty": last_call.get("presence_penalty"),
+                "usage": last_call.get("usage", {}),
+                "latency_seconds": last_call.get("latency_seconds"),
+                "call_id": last_call.get("call_id")
+            }
+            
+            # Calculate cost if we have usage stats
+            usage = last_call.get("usage", {})
+            if usage:
+                input_tokens = usage.get("prompt_tokens", 0)
+                output_tokens = usage.get("completion_tokens", 0)
+                
+                if hasattr(self.llm, 'llm_logger') and self.llm.llm_logger:
+                    cost_info = self.llm.llm_logger.calculate_cost(input_tokens, output_tokens)
+                    llm_metadata["cost"] = cost_info
+        
         # Create structured log
         log_data = {
             "timestamp": timestamp,
             "email_subject": subject,
+            "llm_metadata": llm_metadata,
             "cot_reasoning": reasoning,
             "json_response": json_response,
             "extracted_schemes": [
@@ -342,4 +369,5 @@ class DSPySchemeExtractor:
             json.dump(log_data, f, indent=2, ensure_ascii=False)
         
         logger.info(f"✓ CoT reasoning saved to: {filepath}")
+
 

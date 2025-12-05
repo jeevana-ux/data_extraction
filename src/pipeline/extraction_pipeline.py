@@ -47,7 +47,13 @@ class ExtractionPipeline:
             model=self.config.openrouter_model,
             temperature=self.config.llm_temperature,
             max_tokens=self.config.llm_max_tokens,
-            timeout=self.config.llm_timeout
+            timeout=self.config.llm_timeout,
+            top_p=self.config.llm_top_p,
+            frequency_penalty=self.config.llm_frequency_penalty,
+            presence_penalty=self.config.llm_presence_penalty,
+            enable_logging=self.config.enable_detailed_llm_logging,
+            input_cost_per_1m=self.config.model_input_cost_per_1m_tokens,
+            output_cost_per_1m=self.config.model_output_cost_per_1m_tokens
         )
         
         # Initialize scheme extractor (DSPy with CoT or legacy)
